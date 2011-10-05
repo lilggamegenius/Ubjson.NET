@@ -17,7 +17,7 @@ namespace M1xA.Core.IO.Ubjson
         public UbjsonWriter(Stream stream)
             : base(stream)
         {
-            /// TODO Read Write short, 16 bit integer.
+
         }
 
         /// <summary>
@@ -39,6 +39,12 @@ namespace M1xA.Core.IO.Ubjson
             Stream.WriteByte(value);
         }
 
+        public void Write(short value)
+        {
+            Stream.Write(DataMarker.Int16);
+            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+        }
+
         public void Write(int value)
         {
             Stream.Write(DataMarker.Int32);
@@ -48,6 +54,12 @@ namespace M1xA.Core.IO.Ubjson
         public void Write(long value)
         {
             Stream.Write(DataMarker.Int64);
+            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+        }
+
+        public void Write(float value)
+        {
+            Stream.Write(DataMarker.Float);
             Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
         }
 
@@ -63,11 +75,12 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">BigInteger value to write.</param>
         public void Write(BigInteger value)
         {
+            DataMarker header = DataMarker.Huge;
+
             byte[] data = Encoding.GetBytes(value.ToString());
 
             bool zipped;
-
-            DataMarker header = DataMarker.Huge;
+            
             byte[] length = GetLengthBytes(data.Length, out zipped);
 
             if (zipped)
@@ -86,11 +99,12 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">String value to write.</param>
         public void Write(string value)
         {
+            DataMarker header = DataMarker.String;
+
             byte[] data = Encoding.GetBytes(value.ToString());
 
             bool zipped;
-
-            DataMarker header = DataMarker.String;
+            
             byte[] length = GetLengthBytes(data.Length, out zipped);
 
             if (zipped)
@@ -109,11 +123,12 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">Flat array or container.</param>
         public void Write(Array value)
         {
-            Array array = value as Array;
+            DataMarker header = DataMarker.Array;
+
+            Array array = value;
 
             bool zipped;
-
-            DataMarker header = DataMarker.Array;
+            
             byte[] length = GetLengthBytes(array.Length, out zipped);
 
             if (zipped)
@@ -144,8 +159,10 @@ namespace M1xA.Core.IO.Ubjson
                 case DataMarker.True: Write((bool)o); break;
                 case DataMarker.False: Write((bool)o); break;
                 case DataMarker.Byte: Write((byte)o); break;
+                case DataMarker.Int16: Write((short)o); break;
                 case DataMarker.Int32: Write((int)o); break;
                 case DataMarker.Int64: Write((long)o); break;
+                case DataMarker.Float: Write((float)o); break;
                 case DataMarker.Double: Write((double)o); break;
                 case DataMarker.Huge: Write((BigInteger)o); break;
                 case DataMarker.String: Write(o.ToString()); break;
@@ -153,6 +170,8 @@ namespace M1xA.Core.IO.Ubjson
 
                 case DataMarker.Object:
                     {
+                        DataMarker header = marker;
+
                         if (o is IDictionary<string, object>) // Added for dynamic/ExpandoObject.
                         {
                             Dictionary<string, object> dyno = new Dictionary<string, object>();
@@ -167,7 +186,6 @@ namespace M1xA.Core.IO.Ubjson
 
                             bool zipped;
 
-                            DataMarker header = marker;
                             byte[] length = GetLengthBytes(dyno.Count, out zipped);
 
                             if (zipped)
@@ -193,7 +211,6 @@ namespace M1xA.Core.IO.Ubjson
 
                             bool zipped;
 
-                            DataMarker header = marker;
                             byte[] length = GetLengthBytes(fields.Length + properties.Length, out zipped);
 
                             if (zipped)
@@ -259,6 +276,19 @@ namespace M1xA.Core.IO.Ubjson
             Stream.Write(DataMarker.NoOp);
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        public virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Stream.Flush();
+            }
+        }
+
         /// <summary>
         /// Converts int (32 bit integer) value into byte array according to endianness of host machine.
         /// </summary>
@@ -281,19 +311,6 @@ namespace M1xA.Core.IO.Ubjson
             }
 
             return result;
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        public virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                Stream.Flush();
-            }
         }
     }
 }

@@ -4,7 +4,7 @@ namespace M1xA.Core.IO.Ubjson
 {
     /// <summary>
     /// The markers of types supported by the Universal Binary JSON specification.
-    /// For details, see <a href="http://ubjson.org/">Universal Binary JSON Specification</a>.
+    /// For details, see the Universal Binary JSON Specification.
     /// </summary>
     public enum DataMarker : byte
     {
@@ -29,22 +29,32 @@ namespace M1xA.Core.IO.Ubjson
         False = 0x46,
 
         /// <summary>
-        /// B - byte value.
+        /// B - byte, 8 bit unsigned integer value.
         /// </summary>
         Byte = 0x42,
 
         /// <summary>
-        /// I - Int32, int, 32 bit integer value.
+        /// i - Int16, short, 16 bit signed integer value.
+        /// </summary>
+        Int16 = 0x69,
+
+        /// <summary>
+        /// I - Int32, int, 32 bit signed integer value.
         /// </summary>
         Int32 = 0x49,
 
         /// <summary>
-        /// L - Int64, long, 64 bit integer value.
+        /// L - Int64, long, 64 bit signed integer value.
         /// </summary>
         Int64 = 0x4C,
 
         /// <summary>
-        /// D - double, 64 bit double-precision float point value.
+        /// d - float, 32 bit single-precision float-point value.
+        /// </summary>
+        Float = 0x64,
+
+        /// <summary>
+        /// D - double, 64 bit double-precision float-point value.
         /// </summary>
         Double = 0x44,
 
@@ -54,7 +64,8 @@ namespace M1xA.Core.IO.Ubjson
         ShortHuge = 0x68,
 
         /// <summary>
-        /// H - HugeNumber, BigInteger value. Represented as string.
+        /// H - HugeNumber, BigInteger value. An arbitrarily large signed integer.
+        /// In stream is represented as string according to the specification.
         /// </summary>
         Huge = 0x48,
 
@@ -94,7 +105,7 @@ namespace M1xA.Core.IO.Ubjson
         NoOp = 0x4E,
 
         /// <summary>
-        /// E - the end of unknown-length containers, arrays and objects.
+        /// E - the end of the unknown-length containers, arrays and objects.
         /// </summary>
         End = 0x45
     }

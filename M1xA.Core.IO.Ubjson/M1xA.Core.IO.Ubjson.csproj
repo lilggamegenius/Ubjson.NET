@@ -40,6 +40,8 @@
     <Compile Include="DataMarker.cs" />
     <Compile Include="EndOfContainerException.cs" />
     <Compile Include="Extensions\TypedExtensions.cs" />
+    <Compile Include="InvalidMarkerException.cs" />
+    <Compile Include="IrregularEndOfStreamException.cs" />
     <Compile Include="Ubjson.cs" />
     <Compile Include="UbjsonException.cs" />
     <Compile Include="UbjsonReader.cs" />

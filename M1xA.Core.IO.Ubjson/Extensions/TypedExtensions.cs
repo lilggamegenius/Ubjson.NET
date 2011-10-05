@@ -5,7 +5,7 @@ using System.Numerics;
 
 namespace M1xA.Core.IO.Ubjson.Extensions
 {
-    public static class ObjectTypeExtension
+    internal static class ObjectTypeExtension
     {
         public static DataMarker GetMarker(this object value)
         {
@@ -15,16 +15,22 @@ namespace M1xA.Core.IO.Ubjson.Extensions
             if (value is ValueType)
             {
                 if (value is bool)
-                    return (bool)value == true ? DataMarker.True : DataMarker.False;
+                    return (bool)value ? DataMarker.True : DataMarker.False;
 
                 if (value is byte)
                     return DataMarker.Byte;
+
+                if (value is short)
+                    return DataMarker.Int16;
 
                 if (value is int)
                     return DataMarker.Int32;
 
                 if (value is long)
                     return DataMarker.Int64;
+
+                if (value is float)
+                    return DataMarker.Float;
 
                 if (value is double)
                     return DataMarker.Double;
@@ -45,7 +51,7 @@ namespace M1xA.Core.IO.Ubjson.Extensions
         }
     }
 
-    public static class ByteArrayTypeExtension
+    internal static class ByteArrayTypeExtension
     {
         public static byte[] ReverseIf(this byte[] value, Func<bool> predicate)
         {
@@ -53,18 +59,23 @@ namespace M1xA.Core.IO.Ubjson.Extensions
         }
     }
 
-    public static class PrimitiveTypeExtension
+    internal static class PrimitiveTypeExtension
     {
-        public static bool IsHeader(this byte value, ref DataMarker header)
+        public static bool GetMarker(this byte value, out DataMarker header)
         {
             if (Enum.IsDefined(typeof(DataMarker), value))
             {
                 header = (DataMarker)value;
-
                 return true;
             }
 
+            header = DataMarker.Unknown;
             return false;
+        }
+
+        public static byte[] GetBytes(this short value)
+        {
+            return BitConverter.GetBytes(value);
         }
 
         public static byte[] GetBytes(this int value)
@@ -77,22 +88,45 @@ namespace M1xA.Core.IO.Ubjson.Extensions
             return BitConverter.GetBytes(value);
         }
 
+        public static byte[] GetBytes(this float value)
+        {
+            return BitConverter.GetBytes(value);
+        }
+
         public static byte[] GetBytes(this double value)
         {
             return BitConverter.GetBytes(value);
         }
     }
 
-    public static class StreamExtension
+    internal static class StreamExtension
     {
-        public static bool Read(this Stream stream, ref byte value)
+        /// <summary>
+        /// Reads and return only one byte from stream.
+        /// </summary>
+        /// <param name="stream">Underlying stream.</param>
+        /// <param name="value">Contains readed byte.</param>
+        /// <returns>False when end of stream reached.</returns>
+        public static bool Read(this Stream stream, ref byte result)
         {
             int data = stream.ReadByte();
 
-            if (data == -1)
+            if (data != -1)
+            {
+                result = (byte)data;
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool Read(this Stream stream, byte[] result, int count)
+        {
+            int available = stream.Read(result, 0, count);
+
+            if (available == 0 || available < count)
                 return false;
 
-            value = (byte)data;
             return true;
         }
 
