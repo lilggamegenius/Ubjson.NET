@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 
 namespace M1xA.Core.IO.Ubjson.Extensions
 {
@@ -48,6 +50,64 @@ namespace M1xA.Core.IO.Ubjson.Extensions
                 return DataMarker.Array;
 
             return DataMarker.Object;
+        }
+    }
+
+    internal static class IDictionaryTypeExtension
+    {
+        /// <summary>
+        /// Removes all non serializable items from source.
+        /// </summary>
+        /// <param name="source">Source object that implements IDictionary.</param>
+        /// <returns>Clean dictionary.</returns>
+        public static Dictionary<string, object> Purge(this IDictionary<string, object> source)
+        {
+            Dictionary<string, object> result = new Dictionary<string, object>();
+
+            foreach (KeyValuePair<string, object> kv in source)
+            {
+                if (kv.Value is Delegate) continue; // Skipping all function pointers.
+
+                result.Add(kv.Key, kv.Value);
+            }
+
+            return result;
+        }
+    }
+
+    internal static class FieldInfoArrayTypeExtension
+    {
+        /// <summary>
+        /// Removes all non serializable items from source.
+        /// </summary>
+        /// <param name="array">Object fields array.</param>
+        /// <param name="host">Host object.</param>
+        /// <returns>Clean array.</returns>
+        public static FieldInfo[] Purge(this FieldInfo[] array, object host)
+        {
+            List<FieldInfo> properties = new List<FieldInfo>(array);
+
+            properties.RemoveAll(p => p.GetValue(host) is Delegate); // Skipping all function pointers.
+
+            return properties.ToArray();
+        }
+    }
+
+    internal static class PropertyInfoArrayTypeExtension
+    {
+        /// <summary>
+        /// Removes all non serializable items from source.
+        /// </summary>
+        /// <param name="array">Object properties array.</param>
+        /// <param name="host">Host object.</param>
+        /// <returns>Clean array.</returns>
+        public static PropertyInfo[] Purge(this PropertyInfo[] array, object host)
+        {
+            List<PropertyInfo> properties = new List<PropertyInfo>(array);
+
+            properties.RemoveAll(p => p.GetValue(host, null) is Delegate); // Skipping all function pointers.
+
+            return properties.ToArray();
         }
     }
 

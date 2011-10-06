@@ -174,19 +174,11 @@ namespace M1xA.Core.IO.Ubjson
 
                         if (o is IDictionary<string, object>) // Added for dynamic/ExpandoObject.
                         {
-                            Dictionary<string, object> dyno = new Dictionary<string, object>();
-                            IDictionary<string, object> source = o as IDictionary<string, object>;
-
-                            foreach (KeyValuePair<string, object> kv in source)
-                            {
-                                if (kv.Value is Delegate) continue; // Skipping all function pointers.
-
-                                dyno.Add(kv.Key, kv.Value);
-                            }
+                            Dictionary<string, object> data = (o as IDictionary<string, object>).Purge();
 
                             bool zipped;
 
-                            byte[] length = GetLengthBytes(dyno.Count, out zipped);
+                            byte[] length = GetLengthBytes(data.Count, out zipped);
 
                             if (zipped)
                             {
@@ -196,7 +188,7 @@ namespace M1xA.Core.IO.Ubjson
                             Stream.Write(header);
                             Stream.Write(length);
 
-                            foreach (KeyValuePair<string, object> kv in dyno)
+                            foreach (KeyValuePair<string, object> kv in data)
                             {
                                 Write(kv.Key);
                                 Write(kv.Value);
@@ -206,8 +198,8 @@ namespace M1xA.Core.IO.Ubjson
                         {
                             Type type = o.GetType();
 
-                            FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public);
-                            PropertyInfo[] properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+                            FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public).Purge(o);
+                            PropertyInfo[] properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public).Purge(o);
 
                             bool zipped;
 
