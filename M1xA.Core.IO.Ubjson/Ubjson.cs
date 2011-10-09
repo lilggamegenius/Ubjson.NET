@@ -17,9 +17,9 @@ namespace M1xA.Core.IO.Ubjson
 
         public Ubjson(Stream stream)
         {
-            InvalidEndiannes = () => Endianness == Endianness.Little;
             Encoding = DefaultEncoding;
             Endianness = BitConverter.IsLittleEndian ? Endianness.Little : Endianness.Big;
+            InvalidEndiannes = () => Endianness == Endianness.Little;
 
             Stream = stream;
         }

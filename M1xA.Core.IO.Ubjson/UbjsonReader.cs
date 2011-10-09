@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using System.Text;
 
@@ -14,19 +13,23 @@ namespace M1xA.Core.IO.Ubjson
     /// </summary>
     public class UbjsonReader : Ubjson
     {
+        /// <summary>
+        /// Opens the read-only stream with data from specified array and initializes the UBJSON Reader.
+        /// </summary>
+        /// <param name="data">Well formatted UBJSON objects.</param>
+        public UbjsonReader(byte[] data)
+            : this(new MemoryStream(data))
+        {
+
+        }
+
         public UbjsonReader(Stream stream)
             : base(stream)
         {
-            
+
         }
 
-        public bool EndOfStream
-        {
-            get
-            {
-                return Stream.Position == Stream.Length;
-            }
-        }
+        public bool EndOfStream { get { return Stream.Position == Stream.Length; } }
 
         public object ReadNull()
         {
@@ -172,6 +175,38 @@ namespace M1xA.Core.IO.Ubjson
             throw new InvalidMarkerException(bits);
         }
 
+        /// <summary>
+        /// Reads the array header.
+        /// </summary>
+        /// <returns>Array length.</returns>
+        public int ReadArrayHeader()
+        {
+            DataMarker marker;
+
+            byte bits = GetRawByte();
+
+            if (bits.GetMarker(out marker) && (marker.Equals(DataMarker.Array) || marker.Equals(DataMarker.ShortArray)))
+                return marker == DataMarker.ShortArray ? GetRawByte() : GetRawInt32();
+
+            throw new InvalidMarkerException(bits);
+        }
+
+        /// <summary>
+        /// Reads the object header.
+        /// </summary>
+        /// <returns>Item count.</returns>
+        public int ReadObjectHeader()
+        {
+            DataMarker marker;
+
+            byte bits = GetRawByte();
+
+            if (bits.GetMarker(out marker) && (marker.Equals(DataMarker.Object) || marker.Equals(DataMarker.ShortObject)))
+                return marker == DataMarker.ShortObject ? GetRawByte() : GetRawInt32();
+
+            throw new InvalidMarkerException(bits);
+        }
+
         public bool TryReadNull(ref object result)
         {
             try
@@ -282,6 +317,26 @@ namespace M1xA.Core.IO.Ubjson
             catch { return false; }
         }
 
+        public bool TryReadArrayHeader(ref int length)
+        {
+            try
+            {
+                length = ReadArrayHeader();
+                return true;
+            }
+            catch { return false; }
+        }
+
+        public bool TryReadObjectHeader(ref int itemCount)
+        {
+            try
+            {
+                itemCount = ReadObjectHeader();
+                return true;
+            }
+            catch { return false; }
+        }
+
         /// <summary>
         /// Utility method that automatically detects type 
         /// and parses the only one its item from Ubjson-enabled stream.
@@ -291,9 +346,9 @@ namespace M1xA.Core.IO.Ubjson
         public object Parse()
         {
             DataMarker header;
-            byte bits = 0;
+            byte bits;
 
-            while (Stream.Read(ref bits))
+            while (Stream.Read(out bits))
             {
                 if (bits.GetMarker(out header))
                 {
@@ -330,62 +385,62 @@ namespace M1xA.Core.IO.Ubjson
 
         protected byte GetRawByte()
         {
-            byte result = 0;
+            byte result;
 
-            if (!Stream.Read(ref result))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(out result))
+                return result;
 
-            return result;
+            throw new IrregularEndOfStreamException();
         }
 
         protected short GetRawInt16()
         {
             byte[] data = new byte[sizeof(short)];
 
-            if (!Stream.Read(data, data.Length))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(data, data.Length))
+                return BitConverter.ToInt16(data.ReverseIf(InvalidEndiannes), 0);
 
-            return BitConverter.ToInt16(data.ReverseIf(InvalidEndiannes).ToArray(), 0);
+            throw new IrregularEndOfStreamException();
         }
 
         protected int GetRawInt32()
         {
             byte[] data = new byte[sizeof(int)];
 
-            if (!Stream.Read(data, data.Length))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(data, data.Length))
+                return BitConverter.ToInt32(data.ReverseIf(InvalidEndiannes), 0);
 
-            return BitConverter.ToInt32(data.ReverseIf(InvalidEndiannes).ToArray(), 0);
+            throw new IrregularEndOfStreamException();
         }
 
         protected long GetRawInt64()
         {
             byte[] data = new byte[sizeof(long)];
 
-            if (!Stream.Read(data, data.Length))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(data, data.Length))
+                return BitConverter.ToInt64(data.ReverseIf(InvalidEndiannes), 0);
 
-            return BitConverter.ToInt64(data.ReverseIf(InvalidEndiannes).ToArray(), 0);
+            throw new IrregularEndOfStreamException();
         }
 
         protected float GetRawFloat()
         {
             byte[] data = new byte[sizeof(float)];
 
-            if (!Stream.Read(data, data.Length))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(data, data.Length))
+                return BitConverter.ToSingle(data.ReverseIf(InvalidEndiannes), 0);
 
-            return BitConverter.ToSingle(data.ReverseIf(InvalidEndiannes).ToArray(), 0);
+            throw new IrregularEndOfStreamException();
         }
 
         protected double GetRawDouble()
         {
             byte[] data = new byte[sizeof(double)];
 
-            if (!Stream.Read(data, data.Length))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(data, data.Length))
+                return BitConverter.ToDouble(data.ReverseIf(InvalidEndiannes), 0);
 
-            return BitConverter.ToDouble(data.ReverseIf(InvalidEndiannes).ToArray(), 0);
+            throw new IrregularEndOfStreamException();
         }
 
         protected BigInteger GetRawBigInteger(bool zipped = false)
@@ -399,10 +454,10 @@ namespace M1xA.Core.IO.Ubjson
 
             byte[] data = new byte[byteCount];
 
-            if (!Stream.Read(data, byteCount))
-                throw new IrregularEndOfStreamException();
+            if (Stream.Read(data, byteCount))
+                return Encoding.GetString(data, 0, byteCount);
 
-            return Encoding.GetString(data, 0, byteCount);
+            throw new IrregularEndOfStreamException();
         }
 
         protected object[] GetRawArray(bool zipped = false)
@@ -414,7 +469,7 @@ namespace M1xA.Core.IO.Ubjson
             if (itemCount != UnknownLength)
             {
                 for (int i = 0; i < itemCount; i++)
-                    result[i] = Parse();
+                    result.Add(Parse());
             }
             else
             {

@@ -113,9 +113,9 @@ namespace M1xA.Core.IO.Ubjson.Extensions
 
     internal static class ByteArrayTypeExtension
     {
-        public static byte[] ReverseIf(this byte[] value, Func<bool> predicate)
+        public static byte[] ReverseIf(this byte[] value, Func<bool> condition)
         {
-            return predicate() ? value.Reverse().ToArray() : value;
+            return condition() ? value.Reverse<byte>().ToArray<byte>() : value;
         }
     }
 
@@ -165,9 +165,9 @@ namespace M1xA.Core.IO.Ubjson.Extensions
         /// Reads and return only one byte from stream.
         /// </summary>
         /// <param name="stream">Underlying stream.</param>
-        /// <param name="value">Contains readed byte.</param>
+        /// <param name="result">Contains readed byte.</param>
         /// <returns>False when end of stream reached.</returns>
-        public static bool Read(this Stream stream, ref byte result)
+        public static bool Read(this Stream stream, out byte result)
         {
             int data = stream.ReadByte();
 
@@ -176,8 +176,11 @@ namespace M1xA.Core.IO.Ubjson.Extensions
                 result = (byte)data;
                 return true;
             }
-
-            return false;
+            else
+            {
+                result = default(byte);
+                return false;
+            }
         }
 
         public static bool Read(this Stream stream, byte[] result, int count)

@@ -75,18 +75,13 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">BigInteger value to write.</param>
         public void Write(BigInteger value)
         {
-            DataMarker header = DataMarker.Huge;
+            DataMarker header;
+            bool zipped;
 
             byte[] data = Encoding.GetBytes(value.ToString());
-
-            bool zipped;
-            
             byte[] length = GetLengthBytes(data.Length, out zipped);
 
-            if (zipped)
-            {
-                header = DataMarker.ShortHuge;
-            }
+            header = zipped ? DataMarker.ShortHuge : DataMarker.Huge;
 
             Stream.Write(header);
             Stream.Write(length);
@@ -99,18 +94,13 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">String value to write.</param>
         public void Write(string value)
         {
-            DataMarker header = DataMarker.String;
+            DataMarker header;
+            bool zipped;
 
             byte[] data = Encoding.GetBytes(value.ToString());
-
-            bool zipped;
-            
             byte[] length = GetLengthBytes(data.Length, out zipped);
 
-            if (zipped)
-            {
-                header = DataMarker.ShortString;
-            }
+            header = zipped ? DataMarker.ShortString : DataMarker.String;
 
             Stream.Write(header);
             Stream.Write(length);
@@ -123,26 +113,18 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">Flat array or container.</param>
         public void Write(Array value)
         {
-            DataMarker header = DataMarker.Array;
-
-            Array array = value;
-
+            DataMarker header;
             bool zipped;
-            
-            byte[] length = GetLengthBytes(array.Length, out zipped);
 
-            if (zipped)
-            {
-                header = DataMarker.ShortArray;
-            }
+            byte[] length = GetLengthBytes(value.Length, out zipped);
+
+            header = zipped ? DataMarker.ShortArray : DataMarker.Array;
 
             Stream.Write(header);
             Stream.Write(length);
 
-            foreach (object item in array)
-            {
+            foreach (object item in value)
                 Write(item);
-            }
         }
 
         /// <summary>
@@ -170,25 +152,22 @@ namespace M1xA.Core.IO.Ubjson
 
                 case DataMarker.Object:
                     {
-                        DataMarker header = marker;
+                        DataMarker header;
 
                         if (o is IDictionary<string, object>) // Added for dynamic/ExpandoObject.
                         {
-                            Dictionary<string, object> data = (o as IDictionary<string, object>).Purge();
+                            Dictionary<string, object> members = (o as IDictionary<string, object>).Purge();
 
                             bool zipped;
 
-                            byte[] length = GetLengthBytes(data.Count, out zipped);
+                            byte[] length = GetLengthBytes(members.Count, out zipped);
 
-                            if (zipped)
-                            {
-                                header = DataMarker.ShortObject;
-                            }
+                            header = zipped ? DataMarker.ShortObject : marker;
 
                             Stream.Write(header);
                             Stream.Write(length);
 
-                            foreach (KeyValuePair<string, object> kv in data)
+                            foreach (KeyValuePair<string, object> kv in members)
                             {
                                 Write(kv.Key);
                                 Write(kv.Value);
@@ -205,10 +184,7 @@ namespace M1xA.Core.IO.Ubjson
 
                             byte[] length = GetLengthBytes(fields.Length + properties.Length, out zipped);
 
-                            if (zipped)
-                            {
-                                header = DataMarker.ShortObject;
-                            }
+                            header = zipped ? DataMarker.ShortObject : marker;
 
                             Stream.Write(header);
                             Stream.Write(length);
@@ -260,6 +236,40 @@ namespace M1xA.Core.IO.Ubjson
         }
 
         /// <summary>
+        /// Writes only the short or normal header for object depending on item count.
+        /// </summary>
+        /// <param name="count">Item count.</param>
+        public void WriteObjectHeader(int count)
+        {
+            DataMarker marker;
+            bool zipped;
+
+            byte[] length = GetLengthBytes(count, out zipped);
+
+            marker = zipped ? DataMarker.ShortObject : DataMarker.ShortObject;
+
+            Stream.Write(marker);
+            Stream.Write(length);
+        }
+
+        /// <summary>
+        /// Writes only the short or normal header for array depending on its length.
+        /// </summary>
+        /// <param name="count">Item count, its length.</param>
+        public void WriteArrayHeader(int count)
+        {
+            DataMarker marker;
+            bool zipped;
+
+            byte[] length = GetLengthBytes(count, out zipped);
+
+            marker = zipped ? DataMarker.ShortArray : DataMarker.Array;
+
+            Stream.Write(marker);
+            Stream.Write(length);
+        }
+
+        /// <summary>
         ///  Writes the wait code (NoOp data marker). 
         ///  Added for streaming and network purposes.
         /// </summary>
@@ -276,16 +286,14 @@ namespace M1xA.Core.IO.Ubjson
         public virtual void Dispose(bool disposing)
         {
             if (disposing)
-            {
                 Stream.Flush();
-            }
         }
 
         /// <summary>
         /// Converts int (32 bit integer) value into byte array according to endianness of host machine.
         /// </summary>
         /// <param name="length">Length or items counter of the inspected object.</param>
-        /// <param name="zipped">True if result was zipped.</param>
+        /// <param name="zipped">True, if result was zipped to one byte.</param>
         /// <returns>Byte array that corresponds to passed value.</returns>
         protected byte[] GetLengthBytes(int length, out bool zipped)
         {
