@@ -138,14 +138,26 @@ namespace M1xA.Core.IO.Ubjson
             throw new InvalidMarkerException(bits);
         }
 
-        public BigInteger ReadHuge()
+        public BigInteger ReadHugeBigInteger()
         {
             DataMarker marker;
 
             byte bits = GetRawByte();
 
             if (bits.GetMarker(out marker) && (marker.Equals(DataMarker.Huge) || marker.Equals(DataMarker.ShortHuge)))
-                return GetRawBigInteger(marker.Equals(DataMarker.ShortHuge));
+                return (BigInteger)GetRawHuge(marker.Equals(DataMarker.ShortHuge));
+
+            throw new InvalidMarkerException(bits);
+        }
+
+        public decimal ReadHugeDecimal()
+        {
+            DataMarker marker;
+
+            byte bits = GetRawByte();
+
+            if (bits.GetMarker(out marker) && (marker.Equals(DataMarker.Huge) || marker.Equals(DataMarker.ShortHuge)))
+                return (decimal)GetRawHuge(marker.Equals(DataMarker.ShortHuge));
 
             throw new InvalidMarkerException(bits);
         }
@@ -288,11 +300,21 @@ namespace M1xA.Core.IO.Ubjson
             catch { return false; }
         }
 
-        public bool TryReadHuge(ref BigInteger result)
+        public bool TryReadHugeBigInteger(ref BigInteger result)
         {
             try
             {
-                result = ReadHuge();
+                result = ReadHugeBigInteger();
+                return true;
+            }
+            catch { return false; }
+        }
+
+        public bool TryReadHugeDecimal(ref decimal result)
+        {
+            try
+            {
+                result = ReadHugeDecimal();
                 return true;
             }
             catch { return false; }
@@ -374,8 +396,8 @@ namespace M1xA.Core.IO.Ubjson
                         case DataMarker.Int64: return GetRawInt64();
                         case DataMarker.Float: return GetRawFloat();
                         case DataMarker.Double: return GetRawDouble();
-                        case DataMarker.ShortHuge: return GetRawBigInteger(true);
-                        case DataMarker.Huge: return GetRawBigInteger();
+                        case DataMarker.ShortHuge: return GetRawHuge(true);
+                        case DataMarker.Huge: return GetRawHuge();
                         case DataMarker.ShortString: return GetRawString(true);
                         case DataMarker.String: return GetRawString();
                         case DataMarker.ShortArray: return GetRawArray(true);
@@ -454,9 +476,23 @@ namespace M1xA.Core.IO.Ubjson
             throw new IrregularEndOfStreamException();
         }
 
-        protected BigInteger GetRawBigInteger(bool zipped = false)
+        protected dynamic GetRawHuge(bool zipped = false)
         {
-            return BigInteger.Parse(GetRawString(zipped));
+            BigInteger hugeInt;
+            decimal hugeDecimal;
+
+            string data = GetRawString(zipped);
+
+            if (BigInteger.TryParse(data, out hugeInt))
+            {
+                return hugeInt;
+            }
+            else if (decimal.TryParse(data, out hugeDecimal))
+            {
+                return hugeDecimal;
+            }
+
+            throw new UbjsonException("Invalid Huge number");
         }
 
         protected string GetRawString(bool zipped = false)

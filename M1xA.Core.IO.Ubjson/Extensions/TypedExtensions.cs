@@ -48,6 +48,9 @@ namespace M1xA.Core.IO.Ubjson.Extensions
                 if (value is double)
                     return DataMarker.Double;
 
+                if (value is decimal)
+                    return DataMarker.Huge;
+
                 if (value is BigInteger)
                     return DataMarker.Huge;
 

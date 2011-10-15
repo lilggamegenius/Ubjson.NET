@@ -91,20 +91,16 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">BigInteger value to write.</param>
         public void Write(BigInteger value)
         {
-            byte[] data = Encoding.GetBytes(value.ToString());
+            WriteAsString(value.ToString(), DataMarker.ShortHuge, DataMarker.Huge);
+        }
 
-            if (data.Length <= ShortLength)
-            {
-                Stream.Write(DataMarker.ShortHuge);
-                Stream.WriteByte((byte)data.Length);
-            }
-            else
-            {
-                Stream.Write(DataMarker.Huge);
-                Stream.Write(ByteService.GetBytes(data.Length));
-            }
-
-            Stream.Write(data);
+        /// <summary>
+        /// Writes the passed Huge (number) value or its short version.
+        /// </summary>
+        /// <param name="value">Decimal value to write.</param>
+        public void Write(decimal value)
+        {
+            WriteAsString(value.ToString(), DataMarker.ShortHuge, DataMarker.Huge);
         }
 
         /// <summary>
@@ -113,20 +109,7 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">String value to write.</param>
         public void Write(string value)
         {
-            byte[] data = Encoding.GetBytes(value);
-
-            if (data.Length <= ShortLength)
-            {
-                Stream.Write(DataMarker.ShortString);
-                Stream.WriteByte((byte)data.Length);
-            }
-            else
-            {
-                Stream.Write(DataMarker.String);
-                Stream.Write(ByteService.GetBytes(data.Length));
-            }
-
-            Stream.Write(data);
+            WriteAsString(value, DataMarker.ShortString, DataMarker.String);
         }
 
         /// <summary>
@@ -160,8 +143,8 @@ namespace M1xA.Core.IO.Ubjson
                 case DataMarker.Int64: Write((long)o); break;
                 case DataMarker.Float: Write((float)o); break;
                 case DataMarker.Double: Write((double)o); break;
-                case DataMarker.Huge: Write((BigInteger)o); break;
-                case DataMarker.String: Write(o.ToString()); break;
+                case DataMarker.Huge: WriteAsString(o.ToString(), DataMarker.ShortHuge, DataMarker.Huge); break;
+                case DataMarker.String: WriteAsString(o.ToString(), DataMarker.ShortString, DataMarker.String); break;
                 case DataMarker.Array: Write(o as IList); break;
 
                 case DataMarker.Object:
@@ -218,7 +201,7 @@ namespace M1xA.Core.IO.Ubjson
                     }
                     break;
 
-                default: goto case DataMarker.Object;
+                case DataMarker.Unknown: throw new UbjsonException("Unknown data type to write.");
             }
         }
 
@@ -303,6 +286,24 @@ namespace M1xA.Core.IO.Ubjson
         {
             if (disposing)
                 Stream.Flush();
+        }
+
+        private void WriteAsString(string value, DataMarker shortObject, DataMarker normalObject)
+        {
+            byte[] data = Encoding.GetBytes(value);
+
+            if (data.Length <= ShortLength)
+            {
+                Stream.Write(shortObject);
+                Stream.WriteByte((byte)data.Length);
+            }
+            else
+            {
+                Stream.Write(normalObject);
+                Stream.Write(ByteService.GetBytes(data.Length));
+            }
+
+            Stream.Write(data);
         }
     }
 }
