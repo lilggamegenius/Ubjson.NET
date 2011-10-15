@@ -129,9 +129,9 @@ namespace M1xA.Core.IO.Ubjson.Extensions
         /// <summary>
         /// Materializes the dynamic object/expando object from the dictionary.
         /// </summary>
-        /// <param name="value"></param>
-        /// <param name="check"></param>
-        /// <returns></returns>
+        /// <param name="value">Object to convert.</param>
+        /// <param name="check">Verifying an object inherits the IDictionary.</param>
+        /// <returns>Dynamic object.</returns>
         public static dynamic AsDynamic(this object value, bool check = false)
         {
             if (value is IDictionary<string, object>)

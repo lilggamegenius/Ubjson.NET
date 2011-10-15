@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyVersion("1.0.0.4")]
 [assembly: AssemblyTitle("M1xA.Core.IO.Ubjson")]
-[assembly: AssemblyDescription(".NET-based implementation of the Universal Binary JSON specification.")]
+[assembly: AssemblyDescription(".NET-based implementation of the Universal Binary JSON Specification.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("M1xA LLC.")]
 [assembly: AssemblyProduct("M1xA Ubjson Library.")]
