@@ -1,4 +1,16 @@
+// 
+// UbjsonWriter.cs
+//  
+// Author:
+//       M1xA <dev@m1xa.com>
+// 
+// Copyright (c) 2011 M1xA LLC. All Rights Reserved.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
+// FOR DETAILS, SEE "Ms-PL.txt".
+// 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -14,10 +26,14 @@ namespace M1xA.Core.IO.Ubjson
     /// </summary>
     public class UbjsonWriter : Ubjson, IDisposable
     {
+        private ObjectService _os;
+
         public UbjsonWriter(Stream stream)
             : base(stream)
         {
+            _os = new SimpleObjectService();
 
+            _os.AddIgnorable(typeof(Delegate));
         }
 
         /// <summary>
@@ -42,31 +58,31 @@ namespace M1xA.Core.IO.Ubjson
         public void Write(short value)
         {
             Stream.Write(DataMarker.Int16);
-            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+            Stream.Write(ByteService.GetBytes(value));
         }
 
         public void Write(int value)
         {
             Stream.Write(DataMarker.Int32);
-            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+            Stream.Write(ByteService.GetBytes(value));
         }
 
         public void Write(long value)
         {
             Stream.Write(DataMarker.Int64);
-            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+            Stream.Write(ByteService.GetBytes(value));
         }
 
         public void Write(float value)
         {
             Stream.Write(DataMarker.Float);
-            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+            Stream.Write(ByteService.GetBytes(value));
         }
 
         public void Write(double value)
         {
             Stream.Write(DataMarker.Double);
-            Stream.Write(value.GetBytes().ReverseIf(InvalidEndiannes));
+            Stream.Write(ByteService.GetBytes(value));
         }
 
         /// <summary>
@@ -75,16 +91,19 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">BigInteger value to write.</param>
         public void Write(BigInteger value)
         {
-            DataMarker header;
-            bool zipped;
-
             byte[] data = Encoding.GetBytes(value.ToString());
-            byte[] length = GetLengthBytes(data.Length, out zipped);
 
-            header = zipped ? DataMarker.ShortHuge : DataMarker.Huge;
+            if (data.Length <= ShortLength)
+            {
+                Stream.Write(DataMarker.ShortHuge);
+                Stream.WriteByte((byte)data.Length);
+            }
+            else
+            {
+                Stream.Write(DataMarker.Huge);
+                Stream.Write(ByteService.GetBytes(data.Length));
+            }
 
-            Stream.Write(header);
-            Stream.Write(length);
             Stream.Write(data);
         }
 
@@ -94,16 +113,19 @@ namespace M1xA.Core.IO.Ubjson
         /// <param name="value">String value to write.</param>
         public void Write(string value)
         {
-            DataMarker header;
-            bool zipped;
+            byte[] data = Encoding.GetBytes(value);
 
-            byte[] data = Encoding.GetBytes(value.ToString());
-            byte[] length = GetLengthBytes(data.Length, out zipped);
+            if (data.Length <= ShortLength)
+            {
+                Stream.Write(DataMarker.ShortString);
+                Stream.WriteByte((byte)data.Length);
+            }
+            else
+            {
+                Stream.Write(DataMarker.String);
+                Stream.Write(ByteService.GetBytes(data.Length));
+            }
 
-            header = zipped ? DataMarker.ShortString : DataMarker.String;
-
-            Stream.Write(header);
-            Stream.Write(length);
             Stream.Write(data);
         }
 
@@ -111,17 +133,9 @@ namespace M1xA.Core.IO.Ubjson
         /// Writes header for the passed array or its short version and inspects array items.
         /// </summary>
         /// <param name="value">Flat array or container.</param>
-        public void Write(Array value)
+        public void Write(IList value)
         {
-            DataMarker header;
-            bool zipped;
-
-            byte[] length = GetLengthBytes(value.Length, out zipped);
-
-            header = zipped ? DataMarker.ShortArray : DataMarker.Array;
-
-            Stream.Write(header);
-            Stream.Write(length);
+            WriteArrayHeader(value.Count);
 
             foreach (object item in value)
                 Write(item);
@@ -148,24 +162,15 @@ namespace M1xA.Core.IO.Ubjson
                 case DataMarker.Double: Write((double)o); break;
                 case DataMarker.Huge: Write((BigInteger)o); break;
                 case DataMarker.String: Write(o.ToString()); break;
-                case DataMarker.Array: Write(o as Array); break;
+                case DataMarker.Array: Write(o as IList); break;
 
                 case DataMarker.Object:
                     {
-                        DataMarker header;
-
                         if (o is IDictionary<string, object>) // Added for dynamic/ExpandoObject.
                         {
-                            Dictionary<string, object> members = (o as IDictionary<string, object>).Purge();
+                            Dictionary<string, object> members = _os.GetSerializableMembers(o as IDictionary<string, object>);
 
-                            bool zipped;
-
-                            byte[] length = GetLengthBytes(members.Count, out zipped);
-
-                            header = zipped ? DataMarker.ShortObject : marker;
-
-                            Stream.Write(header);
-                            Stream.Write(length);
+                            WriteObjectHeader(members.Count);
 
                             foreach (KeyValuePair<string, object> kv in members)
                             {
@@ -173,32 +178,41 @@ namespace M1xA.Core.IO.Ubjson
                                 Write(kv.Value);
                             }
                         }
+                        else if (o is IDictionary) // All other dictionaries
+                        {
+                            Dictionary<object, object> members = _os.GetSerializableMembers(o as IDictionary);
+
+                            WriteObjectHeader(members.Count);
+
+                            foreach (KeyValuePair<object, object> kv in members)
+                            {
+                                Write(kv.Key);
+                                Write(kv.Value);
+                            }
+                        }
                         else // Standard case
                         {
-                            Type type = o.GetType();
+                            MemberInfo[] members = _os.GetSerializableMembers(o);
 
-                            FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public).Purge(o);
-                            PropertyInfo[] properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public).Purge(o);
+                            WriteObjectHeader(members.Length);
 
-                            bool zipped;
-
-                            byte[] length = GetLengthBytes(fields.Length + properties.Length, out zipped);
-
-                            header = zipped ? DataMarker.ShortObject : marker;
-
-                            Stream.Write(header);
-                            Stream.Write(length);
-
-                            foreach (FieldInfo field in fields)
+                            foreach (MemberInfo mi in members)
                             {
-                                Write(field.Name);
-                                Write(field.GetValue(o));
-                            }
+                                if (mi is FieldInfo)
+                                {
+                                    FieldInfo fi = mi as FieldInfo;
 
-                            foreach (PropertyInfo property in properties)
-                            {
-                                Write(property.Name);
-                                Write(property.GetValue(o, null));
+                                    Write(fi.Name);
+                                    Write(fi.GetValue(o));
+                                }
+
+                                if (mi is PropertyInfo)
+                                {
+                                    PropertyInfo pi = mi as PropertyInfo;
+
+                                    Write(pi.Name);
+                                    Write(pi.GetValue(o, null));
+                                }
                             }
                         }
                     }
@@ -236,37 +250,39 @@ namespace M1xA.Core.IO.Ubjson
         }
 
         /// <summary>
-        /// Writes only the short or normal header for object depending on item count.
-        /// </summary>
-        /// <param name="count">Item count.</param>
-        public void WriteObjectHeader(int count)
-        {
-            DataMarker marker;
-            bool zipped;
-
-            byte[] length = GetLengthBytes(count, out zipped);
-
-            marker = zipped ? DataMarker.ShortObject : DataMarker.ShortObject;
-
-            Stream.Write(marker);
-            Stream.Write(length);
-        }
-
-        /// <summary>
         /// Writes only the short or normal header for array depending on its length.
         /// </summary>
         /// <param name="count">Item count, its length.</param>
         public void WriteArrayHeader(int count)
         {
-            DataMarker marker;
-            bool zipped;
+            if (count <= ShortLength)
+            {
+                Stream.Write(DataMarker.ShortArray);
+                Stream.WriteByte((byte)count);
+            }
+            else
+            {
+                Stream.Write(DataMarker.Array);
+                Stream.Write(ByteService.GetBytes(count));
+            }
+        }
 
-            byte[] length = GetLengthBytes(count, out zipped);
-
-            marker = zipped ? DataMarker.ShortArray : DataMarker.Array;
-
-            Stream.Write(marker);
-            Stream.Write(length);
+        /// <summary>
+        /// Writes only the short or normal header for object depending on item count.
+        /// </summary>
+        /// <param name="count">Item count.</param>
+        public void WriteObjectHeader(int count)
+        {
+            if (count <= ShortLength)
+            {
+                Stream.Write(DataMarker.ShortObject);
+                Stream.WriteByte((byte)count);
+            }
+            else
+            {
+                Stream.Write(DataMarker.Object);
+                Stream.Write(ByteService.GetBytes(count));
+            }
         }
 
         /// <summary>
@@ -287,30 +303,6 @@ namespace M1xA.Core.IO.Ubjson
         {
             if (disposing)
                 Stream.Flush();
-        }
-
-        /// <summary>
-        /// Converts int (32 bit integer) value into byte array according to endianness of host machine.
-        /// </summary>
-        /// <param name="length">Length or items counter of the inspected object.</param>
-        /// <param name="zipped">True, if result was zipped to one byte.</param>
-        /// <returns>Byte array that corresponds to passed value.</returns>
-        protected byte[] GetLengthBytes(int length, out bool zipped)
-        {
-            byte[] result;
-
-            if (length <= ShortLength)
-            {
-                zipped = true;
-                result = new byte[] { (byte)length };
-            }
-            else
-            {
-                zipped = false;
-                result = length.GetBytes().ReverseIf(InvalidEndiannes);
-            }
-
-            return result;
         }
     }
 }

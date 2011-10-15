@@ -1,5 +1,5 @@
 ﻿// 
-// IrregularEndOfStreamException.cs
+// Endianness.cs
 //  
 // Author:
 //       M1xA <dev@m1xa.com>
@@ -13,12 +13,5 @@ using System;
 
 namespace M1xA.Core.IO.Ubjson
 {
-    public class IrregularEndOfStreamException : UbjsonException
-    {
-        public IrregularEndOfStreamException(string message = null, Exception inner = null)
-            : base(message, inner)
-        {
-
-        }
-    }
+    public enum Endianness : byte { Unknown, Big, Little, Middle }
 }

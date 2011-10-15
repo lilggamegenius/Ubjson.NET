@@ -1,3 +1,14 @@
+// 
+// UbjsonReader.cs
+//  
+// Author:
+//       M1xA <dev@m1xa.com>
+// 
+// Copyright (c) 2011 M1xA LLC. All Rights Reserved.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
+// FOR DETAILS, SEE "Ms-PL.txt".
+// 
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -381,7 +392,7 @@ namespace M1xA.Core.IO.Ubjson
             }
 
             throw new IrregularEndOfStreamException();
-        }
+        }        
 
         protected byte GetRawByte()
         {
@@ -398,7 +409,7 @@ namespace M1xA.Core.IO.Ubjson
             byte[] data = new byte[sizeof(short)];
 
             if (Stream.Read(data, data.Length))
-                return BitConverter.ToInt16(data.ReverseIf(InvalidEndiannes), 0);
+                return ByteService.GetInt16(data);
 
             throw new IrregularEndOfStreamException();
         }
@@ -408,7 +419,7 @@ namespace M1xA.Core.IO.Ubjson
             byte[] data = new byte[sizeof(int)];
 
             if (Stream.Read(data, data.Length))
-                return BitConverter.ToInt32(data.ReverseIf(InvalidEndiannes), 0);
+                return ByteService.GetInt32(data);
 
             throw new IrregularEndOfStreamException();
         }
@@ -418,7 +429,7 @@ namespace M1xA.Core.IO.Ubjson
             byte[] data = new byte[sizeof(long)];
 
             if (Stream.Read(data, data.Length))
-                return BitConverter.ToInt64(data.ReverseIf(InvalidEndiannes), 0);
+                return ByteService.GetInt64(data);
 
             throw new IrregularEndOfStreamException();
         }
@@ -428,7 +439,7 @@ namespace M1xA.Core.IO.Ubjson
             byte[] data = new byte[sizeof(float)];
 
             if (Stream.Read(data, data.Length))
-                return BitConverter.ToSingle(data.ReverseIf(InvalidEndiannes), 0);
+                return ByteService.GetFloat(data);
 
             throw new IrregularEndOfStreamException();
         }
@@ -438,7 +449,7 @@ namespace M1xA.Core.IO.Ubjson
             byte[] data = new byte[sizeof(double)];
 
             if (Stream.Read(data, data.Length))
-                return BitConverter.ToDouble(data.ReverseIf(InvalidEndiannes), 0);
+                return ByteService.GetDouble(data);
 
             throw new IrregularEndOfStreamException();
         }
@@ -455,7 +466,7 @@ namespace M1xA.Core.IO.Ubjson
             byte[] data = new byte[byteCount];
 
             if (Stream.Read(data, byteCount))
-                return Encoding.GetString(data, 0, byteCount);
+                return Encoding.GetString(data);
 
             throw new IrregularEndOfStreamException();
         }

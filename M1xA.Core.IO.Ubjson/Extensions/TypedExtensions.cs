@@ -1,9 +1,20 @@
+// 
+// TypedExtensions.cs
+//  
+// Author:
+//       M1xA <dev@m1xa.com>
+// 
+// Copyright (c) 2011 M1xA LLC. All Rights Reserved.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
+// FOR DETAILS, SEE "Ms-PL.txt".
+// 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
-using System.Linq;
 using System.Numerics;
-using System.Reflection;
 
 namespace M1xA.Core.IO.Ubjson.Extensions
 {
@@ -46,76 +57,10 @@ namespace M1xA.Core.IO.Ubjson.Extensions
             if (value is string)
                 return DataMarker.String;
 
-            if (value is Array)
+            if (value is IList)
                 return DataMarker.Array;
 
             return DataMarker.Object;
-        }
-    }
-
-    internal static class IDictionaryTypeExtension
-    {
-        /// <summary>
-        /// Removes all non serializable items from source.
-        /// </summary>
-        /// <param name="source">Source object that implements IDictionary.</param>
-        /// <returns>Clean dictionary.</returns>
-        public static Dictionary<string, object> Purge(this IDictionary<string, object> source)
-        {
-            Dictionary<string, object> result = new Dictionary<string, object>();
-
-            foreach (KeyValuePair<string, object> kv in source)
-            {
-                if (kv.Value is Delegate) continue; // Skipping all function pointers.
-
-                result.Add(kv.Key, kv.Value);
-            }
-
-            return result;
-        }
-    }
-
-    internal static class FieldInfoArrayTypeExtension
-    {
-        /// <summary>
-        /// Removes all non serializable items from source.
-        /// </summary>
-        /// <param name="array">Object fields array.</param>
-        /// <param name="host">Host object.</param>
-        /// <returns>Clean array.</returns>
-        public static FieldInfo[] Purge(this FieldInfo[] array, object host)
-        {
-            List<FieldInfo> properties = new List<FieldInfo>(array);
-
-            properties.RemoveAll(p => p.GetValue(host) is Delegate); // Skipping all function pointers.
-
-            return properties.ToArray();
-        }
-    }
-
-    internal static class PropertyInfoArrayTypeExtension
-    {
-        /// <summary>
-        /// Removes all non serializable items from source.
-        /// </summary>
-        /// <param name="array">Object properties array.</param>
-        /// <param name="host">Host object.</param>
-        /// <returns>Clean array.</returns>
-        public static PropertyInfo[] Purge(this PropertyInfo[] array, object host)
-        {
-            List<PropertyInfo> properties = new List<PropertyInfo>(array);
-
-            properties.RemoveAll(p => p.GetValue(host, null) is Delegate); // Skipping all function pointers.
-
-            return properties.ToArray();
-        }
-    }
-
-    internal static class ByteArrayTypeExtension
-    {
-        public static byte[] ReverseIf(this byte[] value, Func<bool> condition)
-        {
-            return condition() ? value.Reverse<byte>().ToArray<byte>() : value;
         }
     }
 
@@ -131,31 +76,6 @@ namespace M1xA.Core.IO.Ubjson.Extensions
 
             header = DataMarker.Unknown;
             return false;
-        }
-
-        public static byte[] GetBytes(this short value)
-        {
-            return BitConverter.GetBytes(value);
-        }
-
-        public static byte[] GetBytes(this int value)
-        {
-            return BitConverter.GetBytes(value);
-        }
-
-        public static byte[] GetBytes(this long value)
-        {
-            return BitConverter.GetBytes(value);
-        }
-
-        public static byte[] GetBytes(this float value)
-        {
-            return BitConverter.GetBytes(value);
-        }
-
-        public static byte[] GetBytes(this double value)
-        {
-            return BitConverter.GetBytes(value);
         }
     }
 
@@ -201,6 +121,59 @@ namespace M1xA.Core.IO.Ubjson.Extensions
         public static void Write(this Stream output, byte[] data)
         {
             output.Write(data, 0, data.Length);
+        }
+    }
+
+    public static class IDictionaryExtension
+    {
+        /// <summary>
+        /// Materializes the dynamic object/expando object from the dictionary.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="check"></param>
+        /// <returns></returns>
+        public static dynamic AsDynamic(this object value, bool check = false)
+        {
+            if (value is IDictionary<string, object>)
+            {
+                ExpandoObject expando = new ExpandoObject();
+
+                IDictionary<string, object> o = value as IDictionary<string, object>;
+                IDictionary<string, object> e = expando as IDictionary<string, object>;
+
+                foreach (KeyValuePair<string, object> entry in o)
+                {
+                    if (entry.Value is IDictionary<string, object>)
+                    {
+                        e.Add(entry.Key, entry.Value.AsDynamic());
+                    }
+                    else if (entry.Value is IList)
+                    {
+                        IList array = entry.Value as IList;
+
+                        dynamic[] items = new dynamic[array.Count];
+
+                        for (int i = 0; i < array.Count; i++)
+                        {
+                            items[i] = array[i].AsDynamic();
+                        }
+
+                        e.Add(entry.Key, items);
+                    }
+                    else
+                    {
+                        e.Add(entry);
+                    }
+                }
+
+                return expando;
+            }
+            else if (!check)
+            {
+                return value;
+            }
+
+            throw new UbjsonException("Can't cast an object to dynamic/expando object.");
         }
     }
 }
