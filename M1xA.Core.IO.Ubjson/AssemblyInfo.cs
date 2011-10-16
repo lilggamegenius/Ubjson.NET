@@ -13,7 +13,7 @@ using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyVersion("1.0.0.4")]
+[assembly: AssemblyVersion("1.0.0.7")]
 [assembly: AssemblyTitle("M1xA.Core.IO.Ubjson")]
 [assembly: AssemblyDescription(".NET-based implementation of the Universal Binary JSON Specification.")]
 [assembly: AssemblyConfiguration("")]
