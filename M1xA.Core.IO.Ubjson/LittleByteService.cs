@@ -9,148 +9,141 @@
 // THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
 // FOR DETAILS, SEE "Ms-PL.txt".
 // 
+
 using System;
 
-namespace M1xA.Core.IO.Ubjson
-{
-    public class LittleByteService : ByteService
-    {
-        public override byte[] GetBytes(short value)
-        {
-            byte[] result = new byte[sizeof(short)];
-            ShortBytes primitive = new ShortBytes() { Short = value };
+namespace M1xA.Core.IO.Ubjson;
 
-            result[0] = primitive.Byte1;
-            result[1] = primitive.Byte0;
+public class LittleByteService : ByteService{
+	public override void GetBytes(short value, Span<byte> bytes){
+		var primitive = new ShortBytes{ Short = value };
+		bytes[0] = primitive.Byte1;
+		bytes[1] = primitive.Byte0;
+	}
 
-            return result;
-        }
+	public override void GetBytes(int value, Span<byte> bytes){
+		var primitive = new IntBytes{ Int = value };
+		bytes[0] = primitive.Byte3;
+		bytes[1] = primitive.Byte2;
+		bytes[2] = primitive.Byte1;
+		bytes[3] = primitive.Byte0;
+	}
 
-        public override byte[] GetBytes(int value)
-        {
-            byte[] result = new byte[sizeof(int)];
-            IntBytes primitive = new IntBytes() { Int = value };
+	public override void GetBytes(long value, Span<byte> bytes){
+		var primitive = new LongBytes{ Long = value };
+		bytes[0] = primitive.Byte7;
+		bytes[1] = primitive.Byte6;
+		bytes[2] = primitive.Byte5;
+		bytes[3] = primitive.Byte4;
+		bytes[4] = primitive.Byte3;
+		bytes[5] = primitive.Byte2;
+		bytes[6] = primitive.Byte1;
+		bytes[7] = primitive.Byte0;
+	}
 
-            result[0] = primitive.Byte3;
-            result[1] = primitive.Byte2;
-            result[2] = primitive.Byte1;
-            result[3] = primitive.Byte0;
+	public override void GetBytes(float value, Span<byte> bytes){
+		var primitive = new FloatBytes{ Float = value };
+		bytes[0] = primitive.Byte3;
+		bytes[1] = primitive.Byte2;
+		bytes[2] = primitive.Byte1;
+		bytes[3] = primitive.Byte0;
+	}
 
-            return result;
-        }
+	public override void GetBytes(double value, Span<byte> bytes){
+		var primitive = new DoubleBytes{ Double = value };
+		bytes[0] = primitive.Byte7;
+		bytes[1] = primitive.Byte6;
+		bytes[2] = primitive.Byte5;
+		bytes[3] = primitive.Byte4;
+		bytes[4] = primitive.Byte3;
+		bytes[5] = primitive.Byte2;
+		bytes[6] = primitive.Byte1;
+		bytes[7] = primitive.Byte0;
+	}
 
-        public override byte[] GetBytes(long value)
-        {
-            byte[] result = new byte[sizeof(long)];
-            LongBytes primitive = new LongBytes() { Long = value };
+	public override short GetInt16(ReadOnlySpan<byte> bytes){
+		var primitive = new ShortBytes{
+			Byte0 = bytes[1],
+			Byte1 = bytes[0]
+		};
+		return primitive.Short;
+	}
 
-            result[0] = primitive.Byte7;
-            result[1] = primitive.Byte6;
-            result[2] = primitive.Byte5;
-            result[3] = primitive.Byte4;
-            result[4] = primitive.Byte3;
-            result[5] = primitive.Byte2;
-            result[6] = primitive.Byte1;
-            result[7] = primitive.Byte0;
+	public override int GetInt32(ReadOnlySpan<byte> bytes){
+		var primitive = new IntBytes{
+			Byte0 = bytes[3],
+			Byte1 = bytes[2],
+			Byte2 = bytes[1],
+			Byte3 = bytes[0]
+		};
+		return primitive.Int;
+	}
 
-            return result;
-        }
+	public override long GetInt64(ReadOnlySpan<byte> bytes){
+		var primitive = new LongBytes{
+			Byte0 = bytes[7],
+			Byte1 = bytes[6],
+			Byte2 = bytes[5],
+			Byte3 = bytes[4],
+			Byte4 = bytes[3],
+			Byte5 = bytes[2],
+			Byte6 = bytes[1],
+			Byte7 = bytes[0]
+		};
+		return primitive.Long;
+	}
 
-        public override byte[] GetBytes(float value)
-        {
-            byte[] result = new byte[sizeof(float)];
-            FloatBytes primitive = new FloatBytes() { Float = value };
+	public override float GetFloat(ReadOnlySpan<byte> bytes){
+		var primitive = new FloatBytes{
+			Byte0 = bytes[3],
+			Byte1 = bytes[2],
+			Byte2 = bytes[1],
+			Byte3 = bytes[0]
+		};
+		return primitive.Float;
+	}
 
-            result[0] = primitive.Byte3;
-            result[1] = primitive.Byte2;
-            result[2] = primitive.Byte1;
-            result[3] = primitive.Byte0;
-
-            return result;
-        }
-
-        public override byte[] GetBytes(double value)
-        {
-            byte[] result = new byte[sizeof(double)];
-            DoubleBytes primitive = new DoubleBytes() { Double = value };
-
-            result[0] = primitive.Byte7;
-            result[1] = primitive.Byte6;
-            result[2] = primitive.Byte5;
-            result[3] = primitive.Byte4;
-            result[4] = primitive.Byte3;
-            result[5] = primitive.Byte2;
-            result[6] = primitive.Byte1;
-            result[7] = primitive.Byte0;
-
-            return result;
-        }
-
-
-        public override short GetInt16(byte[] bytes)
-        {
-            ShortBytes primitive = new ShortBytes();
-
-            primitive.Byte0 = bytes[1];
-            primitive.Byte1 = bytes[0];
-
-            return primitive.Short;
-        }
-
-        public override int GetInt32(byte[] bytes)
-        {
-            IntBytes primitive = new IntBytes();
-
-            primitive.Byte0 = bytes[3];
-            primitive.Byte1 = bytes[2];
-            primitive.Byte2 = bytes[1];
-            primitive.Byte3 = bytes[0];
-
-            return primitive.Int;
-        }
-
-        public override long GetInt64(byte[] bytes)
-        {
-            LongBytes primitive = new LongBytes();
-
-            primitive.Byte0 = bytes[7];
-            primitive.Byte1 = bytes[6];
-            primitive.Byte2 = bytes[5];
-            primitive.Byte3 = bytes[4];
-            primitive.Byte4 = bytes[3];
-            primitive.Byte5 = bytes[2];
-            primitive.Byte6 = bytes[1];
-            primitive.Byte7 = bytes[0];
-
-            return primitive.Long;
-        }
-
-        public override float GetFloat(byte[] bytes)
-        {
-            FloatBytes primitive = new FloatBytes();
-
-            primitive.Byte0 = bytes[3];
-            primitive.Byte1 = bytes[2];
-            primitive.Byte2 = bytes[1];
-            primitive.Byte3 = bytes[0];
-
-            return primitive.Float;
-        }
-
-        public override double GetDouble(byte[] bytes)
-        {
-            DoubleBytes primitive = new DoubleBytes();
-
-            primitive.Byte0 = bytes[7];
-            primitive.Byte1 = bytes[6];
-            primitive.Byte2 = bytes[5];
-            primitive.Byte3 = bytes[4];
-            primitive.Byte4 = bytes[3];
-            primitive.Byte5 = bytes[2];
-            primitive.Byte6 = bytes[1];
-            primitive.Byte7 = bytes[0];
-
-            return primitive.Double;
-        }
-    }
+	public override double GetDouble(ReadOnlySpan<byte> bytes){
+		var primitive = new DoubleBytes{
+			Byte0 = bytes[7],
+			Byte1 = bytes[6],
+			Byte2 = bytes[5],
+			Byte3 = bytes[4],
+			Byte4 = bytes[3],
+			Byte5 = bytes[2],
+			Byte6 = bytes[1],
+			Byte7 = bytes[0]
+		};
+		return primitive.Double;
+	}
+	[Obsolete("Please use the Span<> overloads")]
+	public override byte[] GetBytes(short value){
+		byte[] bytes = new byte[sizeof(short)];
+		GetBytes(value, bytes);
+		return bytes;
+	}
+	[Obsolete("Please use the Span<> overloads")]
+	public override byte[] GetBytes(int value){
+		byte[] bytes = new byte[sizeof(int)];
+		GetBytes(value, bytes);
+		return bytes;
+	}
+	[Obsolete("Please use the Span<> overloads")]
+	public override byte[] GetBytes(long value){
+		byte[] bytes = new byte[sizeof(long)];
+		GetBytes(value, bytes);
+		return bytes;
+	}
+	[Obsolete("Please use the Span<> overloads")]
+	public override byte[] GetBytes(float value){
+		byte[] bytes = new byte[sizeof(float)];
+		GetBytes(value, bytes);
+		return bytes;
+	}
+	[Obsolete("Please use the Span<> overloads")]
+	public override byte[] GetBytes(double value){
+		byte[] bytes = new byte[sizeof(double)];
+		GetBytes(value, bytes);
+		return bytes;
+	}
 }

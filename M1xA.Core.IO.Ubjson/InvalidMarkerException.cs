@@ -9,22 +9,13 @@
 // THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
 // FOR DETAILS, SEE "Ms-PL.txt".
 // 
+
 using System;
 
-namespace M1xA.Core.IO.Ubjson
-{
-    public class InvalidMarkerException: UbjsonException
-    {
-        public InvalidMarkerException(byte invalid, Exception inner = null)
-            : base(string.Format("Was read an invalid marker. Value: 0x{0:x}.", invalid), inner)
-        {
+namespace M1xA.Core.IO.Ubjson;
 
-        }
+public class InvalidMarkerException : UbjsonException{
+	public InvalidMarkerException(byte invalid, Exception inner = null) : base($"Was read an invalid marker. Value: 0x{invalid:x}.", inner){}
 
-        public InvalidMarkerException(string message = null, Exception inner = null)
-            : base(message, inner)
-        {
-
-        }
-    }
+	public InvalidMarkerException(string message = null, Exception inner = null) : base(message, inner){}
 }

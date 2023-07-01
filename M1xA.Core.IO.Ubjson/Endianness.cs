@@ -9,9 +9,7 @@
 // THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
 // FOR DETAILS, SEE "Ms-PL.txt".
 // 
-using System;
 
-namespace M1xA.Core.IO.Ubjson
-{
-    public enum Endianness : byte { Unknown, Big, Little, Middle }
-}
+namespace M1xA.Core.IO.Ubjson;
+
+public enum Endianness : byte{ Unknown, Big, Little, Middle }

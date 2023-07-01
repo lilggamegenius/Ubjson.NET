@@ -9,103 +9,78 @@
 // THE SOFTWARE IS PROVIDED "AS IS" UNDER THE MICROSOFT PUBLIC LICENCE.
 // FOR DETAILS, SEE "Ms-PL.txt".
 // 
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace M1xA.Core.IO.Ubjson
-{
-    internal class SimpleObjectService : ObjectService
-    {
-        private List<Type> _ignore;
-        private Dictionary<string, object> _infoCache;
+namespace M1xA.Core.IO.Ubjson;
 
-        public SimpleObjectService()
-        {
-            _ignore = new List<Type>();
-            _infoCache = new Dictionary<string, object>();
-        }
+internal class SimpleObjectService : ObjectService{
+	private readonly List<Type> _ignore;
+	private readonly Dictionary<string, object> _infoCache;
 
-        public override void AddIgnorable(Type type)
-        {
-            if (!_ignore.Contains(type))
-                _ignore.Add(type);
-        }
+	public SimpleObjectService(){
+		_ignore = new List<Type>();
+		_infoCache = new Dictionary<string, object>();
+	}
 
-        public override void ClearIgnorable()
-        {
-            _ignore.Clear();
-        }
+	public override void AddIgnorable(Type type){
+		if(!_ignore.Contains(type)){
+			_ignore.Add(type);
+		}
+	}
 
-        public override MemberInfo[] GetSerializableMembers(object o)
-        {
-            Type type = o.GetType();
+	public override void ClearIgnorable()=>_ignore.Clear();
 
-            string key = type.ToString();
+	public override MemberInfo[] GetSerializableMembers(object o){
+		Type type = o.GetType();
+		string key = type.ToString();
+		if(_infoCache.TryGetValue(key, out object value)){
+			return (MemberInfo[])value;
+		}
 
-            if (_infoCache.ContainsKey(key))
-            {
-                return (MemberInfo[])_infoCache[key];
-            }
-            else
-            {
-                MemberInfo[] info = type.FindMembers(MemberTypes.Field | MemberTypes.Property, BindingFlags.Instance | BindingFlags.Public, MemberFilter, null);
+		MemberInfo[] info = type.FindMembers(MemberTypes.Field | MemberTypes.Property, BindingFlags.Instance | BindingFlags.Public, MemberFilter, null);
+		_infoCache.Add(key, info);
+		return info;
+	}
 
-                _infoCache.Add(key, info);
+	public override Dictionary<string, object> GetSerializableMembers(IDictionary<string, object> o){
+		Dictionary<string, object> result = new();
+		foreach(KeyValuePair<string, object> kv in o){
+			if(!Ignorable(kv.Value.GetType())){
+				result.Add(kv.Key, kv.Value);
+			}
+		}
 
-                return info;
-            }
-        }
+		return result;
+	}
 
-        public override Dictionary<string, object> GetSerializableMembers(IDictionary<string, object> o)
-        {
-            Dictionary<string, object> result = new Dictionary<string, object>();
+	public override Dictionary<object, object> GetSerializableMembers(IDictionary o){
+		Dictionary<object, object> result = new();
+		foreach(DictionaryEntry kv in o){
+			if(!Ignorable(kv.Value.GetType())){
+				result.Add(kv.Key, kv.Value);
+			}
+		}
 
-            foreach (KeyValuePair<string, object> kv in o)
-            {
-                if (!Ignorable(kv.Value.GetType()))
-                    result.Add(kv.Key, kv.Value);
-            }
+		return result;
+	}
 
-            return result;
-        }
+	private bool MemberFilter(MemberInfo mi, object _){
+		return mi switch{
+			FieldInfo info=>!Ignorable(info.FieldType),
+			PropertyInfo info=>!Ignorable(info.PropertyType),
+			_=>false
+		};
+	}
 
-        public override Dictionary<object, object> GetSerializableMembers(IDictionary o)
-        {
-            Dictionary<object, object> result = new Dictionary<object, object>();
-            
-            foreach (DictionaryEntry kv in o)
-            {
-                if (!Ignorable(kv.Value.GetType()))
-                    result.Add(kv.Key, kv.Value);
-            }
+	private bool Ignorable(Type type){
+		foreach(Type t in _ignore){
+			if(t.IsAssignableFrom(type)) return true;
+		}
 
-            return result;
-        }
-
-        private bool MemberFilter(MemberInfo mi, object _)
-        {
-            if (mi is FieldInfo)
-            {
-                return !Ignorable((mi as FieldInfo).FieldType);
-            }
-
-            if (mi is PropertyInfo)
-            {
-                return !Ignorable((mi as PropertyInfo).PropertyType);
-            }
-
-            return false;
-        }
-
-        private bool Ignorable(Type type)
-        {
-            foreach (Type t in _ignore)
-                if (t.IsAssignableFrom(type))
-                    return true;
-
-            return false;
-        }
-    }
+		return false;
+	}
 }
